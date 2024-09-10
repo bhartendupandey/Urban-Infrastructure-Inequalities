@@ -2,6 +2,7 @@
 rm(list=ls())
 library(viridis)
 library(grid)
+library(GGally)
 library(tidyverse)
 #remotes::install_github("Nowosad/rcartocolor")
 library(rcartocolor)
@@ -109,8 +110,8 @@ theme(panel.grid.major.y = element_blank(),panel.grid.major.x = element_line( si
 
 plt3_ = grid.arrange(pltwtnn,pltbtwn,ncol=2)
 plt3_
-ggsave("D:/Paper2/Figures/SSP1_5_within_betwen_2019_2050.pdf",plt3_,
-width=12,height=7,useDingbats=FALSE,family="sans")
+#ggsave("D:/Paper2/Figures/SSP1_5_within_betwen_2019_2050.pdf",plt3_,
+#width=12,height=7,useDingbats=FALSE,family="sans")
 
 
 ##################################################### HISTORIC #############################################################
@@ -121,7 +122,7 @@ regplot[regplot$Year < 2019,"alpha"] = 0.5
 regplot[regplot$Year >= 2019,"alpha"] = 1
 regplot$Region = recode(regplot$Region, China = "CHN", India = "IND",`East Asia & Pacific` = "EAP",
 `Europe & Central Asia` = "ECA",`Latin America & Caribbean`="LAC",`Middle East & North Africa`="MENA",`North America` = "NAM",`South Asia` = "SA",`Sub-Saharan Africa` = "SSA")
-
+regplot$Region = factor(regplot$Region,levels = c("NAM","ECA","MENA","IND","CHN","SA","EAP","LAC","SSA"))
 regplot_w = regplot
 
 
@@ -131,7 +132,7 @@ regplot[regplot$Year < 2019,"alpha"] = 0.5
 regplot[regplot$Year >= 2019,"alpha"] = 1
 regplot$Region = recode(regplot$Region, China = "CHN", India = "IND",`East Asia & Pacific` = "EAP",
 `Europe & Central Asia` = "ECA",`Latin America & Caribbean`="LAC",`Middle East & North Africa`="MENA",`North America` = "NAM",`South Asia` = "SA",`Sub-Saharan Africa` = "SSA")
-
+regplot$Region = factor(regplot$Region,levels = c("NAM","ECA","MENA","IND","CHN","SA","EAP","LAC","SSA"))
 regplot_b = regplot
 
 historic = regplot_w %>% left_join(regplot_b,by=c("Region","Year")) %>% filter(Year<2020)
@@ -141,8 +142,6 @@ dat_labels <- historic %>% group_by(Region) %>% summarize(
   y=mean(Predicted.y) + 0.03,
   label_value=round(cor.test(Predicted.x,Predicted.y,method="spearman")$estimate,2)
 )
-
-library(rcartocolor)
 cols = carto_pal(9, "Safe")
 bw_correlations_historic=ggplot(historic,aes(Predicted.x,Predicted.y,group=Region,color=Region)) +
 geom_point(size=2.5) + geom_smooth(se=F) +
