@@ -1,0 +1,364 @@
+### CAUTION ONLY HISTORIC INEQUALITY PLOT IN SCRIPT IS CORRECT, FUTURE PLOTS involving variability across SSPs
+### are incorrect as the sd() is applied to variability across SSPs and countries within World Regions
+### WITHIN INEQUALITY
+rm(list=ls())
+
+# Plot Forecasts
+library(tidyverse)
+library(ggplot2)
+library(gghighlight)
+library(gridExtra)
+
+## INITIAL DATA
+source("G:/Projects/PhD Research/Paper 2/Analysis/6_InequalityForecasting/SourceFilesandData/Functions.R")
+datab = gettraining()
+datab$Scenario=NA
+datab = datab[,c("Country","GID_0","region","Scenario","Year","Inequality_wtn")]
+colnames(datab)[3] = "Region"
+Scenario = rep(paste("SSP",1:5,sep=""),each=2760)
+datab = rbind(datab,datab,datab,datab,datab)
+datab$Scenario = Scenario
+
+setwd("G:/Projects/PhD Research/Paper 2/Analysis/6_InequalityForecasting/Forecasts/Within")
+files = list.files(pattern="*.csv")
+
+scenario = as.character(t(as.data.frame(strsplit(files,"_")))[,1])
+Year = as.numeric(t(as.data.frame(strsplit(as.character(t(as.data.frame(strsplit(files,"_")))[,2]),".csv"))))
+
+outdf = NULL
+
+for(i in 1:length(files)){
+	csv = read.csv(files[i])[,-1]
+	#csv[,4:6] = csv[,4:6]-csv[,3]
+	csv$Scenario = scenario[i]
+	csv$Year = Year[i]
+	outdf = rbind(outdf,csv)
+}
+
+outdf = outdf[,c("Country","GID_0","Region","Scenario","Year","Predicted")]
+colnames(outdf)[6] = "Inequality_wtn"
+
+outdf = rbind(datab,outdf)
+head(outdf)
+outdf$Region= as.character(outdf$Region)
+outdf[outdf$Country=="India","Region"] = "India"
+outdf[outdf$Country=="China","Region"] = "China"
+outdfw = outdf
+
+rotatedAxisElementText = function(angle,position='x'){
+  angle     = angle[1]; 
+  position  = position[1]
+  positions = list(x=0,y=90,top=180,right=270)
+  if(!position %in% names(positions))
+    stop(sprintf("'position' must be one of [%s]",paste(names(positions),collapse=", ")),call.=FALSE)
+  if(!is.numeric(angle))
+    stop("'angle' must be numeric",call.=FALSE)
+  rads  = (angle - positions[[ position ]])*pi/180
+  hjust = 0.5*(1 - sin(rads))
+  vjust = 0.5*(1 + cos(rads))
+  element_text(angle=angle,vjust=vjust,hjust=hjust)
+}
+
+## ACROSS all SSPs
+
+regplot = outdf %>% group_by(Region,Year) %>% summarize(Predicted=mean(Inequality_wtn),PredictedSD = sd(Inequality_wtn)) %>% ungroup()
+regplot$alpha=0
+regplot[regplot$Year < 2019,"alpha"] = 0.5
+regplot[regplot$Year >= 2019,"alpha"] = 1
+regplot$Region = recode(regplot$Region, China = "CHN", India = "IND",`East Asia & Pacific` = "EAP",
+`Europe & Central Asia` = "ECA",`Latin America & Caribbean`="LAC",`Middle East & North Africa`="MENA",`North America` = "NAM",`South Asia` = "SA",`Sub-Saharan Africa` = "SSA")
+
+regplot$Low = regplot$Predicted - regplot$PredictedSD
+regplot$High = regplot$Predicted + regplot$PredictedSD
+regplot[regplot$Year<2020,"Low"] = regplot[regplot$Year<2020,"Predicted"]
+regplot[regplot$Year<2020,"High"] =regplot[regplot$Year<2020,"Predicted"]
+
+regplot_w = regplot
+
+###########################################################################################################
+# BETWEEN INEQUALITY
+
+## INITIAL DATA
+source("G:/Projects/PhD Research/Paper 2/Analysis/6_InequalityForecasting/SourceFilesandData/Functions.R")
+datab = gettraining()
+datab$Scenario=NA
+datab = datab[,c("Country","GID_0","region","Scenario","Year","Inequality_btwn")]
+colnames(datab)[3] = "Region"
+Scenario = rep(paste("SSP",1:5,sep=""),each=2760)
+datab = rbind(datab,datab,datab,datab,datab)
+datab$Scenario = Scenario
+
+setwd("G:/Projects/PhD Research/Paper 2/Analysis/6_InequalityForecasting/Forecasts/Between")
+files = list.files(pattern="*.csv")
+
+scenario = as.character(t(as.data.frame(strsplit(files,"_")))[,1])
+Year = as.numeric(t(as.data.frame(strsplit(as.character(t(as.data.frame(strsplit(files,"_")))[,2]),".csv"))))
+
+outdf = NULL
+
+for(i in 1:length(files)){
+	csv = read.csv(files[i])[,-1]
+	#csv[,4:6] = csv[,4:6]-csv[,3]
+	csv$Scenario = scenario[i]
+	csv$Year = Year[i]
+	outdf = rbind(outdf,csv)
+}
+
+outdf = outdf[,c("Country","GID_0","Region","Scenario","Year","Predicted")]
+colnames(outdf)[6] = "Inequality_btwn"
+
+outdf = rbind(datab,outdf)
+head(outdf)
+outdf$Region= as.character(outdf$Region)
+outdf[outdf$Country=="India","Region"] = "India"
+outdf[outdf$Country=="China","Region"] = "China"
+outdfb = outdf
+
+## ACROSS all SSPs
+
+regplot = outdf %>% group_by(Region,Year) %>% summarize(Predicted=mean(Inequality_btwn),PredictedSD = sd(Inequality_btwn)) %>% ungroup()
+regplot$alpha=0
+regplot[regplot$Year < 2019,"alpha"] = 0.5
+regplot[regplot$Year >= 2019,"alpha"] = 1
+regplot$Region = recode(regplot$Region, China = "CHN", India = "IND",`East Asia & Pacific` = "EAP",
+`Europe & Central Asia` = "ECA",`Latin America & Caribbean`="LAC",`Middle East & North Africa`="MENA",`North America` = "NAM",`South Asia` = "SA",`Sub-Saharan Africa` = "SSA")
+
+regplot$Low = regplot$Predicted - regplot$PredictedSD
+regplot$High = regplot$Predicted + regplot$PredictedSD
+regplot[regplot$Year<2020,"Low"] = regplot[regplot$Year<2020,"Predicted"]
+regplot[regplot$Year<2020,"High"] =regplot[regplot$Year<2020,"Predicted"]
+
+regplot_b = regplot
+
+
+## Combine Within and Between
+regplot_w$Type = "Within"
+regplot_b$Type = "Between"
+regplot = rbind(regplot_w,regplot_b)
+
+forecasts_avg = ggplot() +  
+#geom_point(data=subset(regplot,Type=="Within"),aes(x=Year,y=Predicted,group=Region,color=Type),size=1) +
+geom_line(data=subset(regplot,Type=="Within"),aes(x=Year,y=Predicted,group=Region,color=Type)) +
+#geom_point(data=subset(regplot,Type=="Between"),aes(x=Year,y=Predicted,group=Region,color=Type),size=1) +  
+geom_line(data=subset(regplot,Type=="Between"),aes(x=Year,y=Predicted,group=Region,color=Type)) +  
+geom_ribbon(data=subset(regplot,Type=="Within"),aes(x=Year,y=Predicted,ymin = Low, ymax = High,group=Region,fill=Type),alpha=0.25,col=NA) + 
+geom_ribbon(data=subset(regplot,Type=="Between"),aes(x=Year,y=Predicted,ymin = Low, ymax = High,group=Region,fill=Type),alpha=0.25,col=NA) + 
+theme_bw() +  facet_wrap(~Region,nrow=3) + labs(y="Inequality") + 
+theme(legend.position="bottom",
+	axis.title=element_text(size=20),
+	axis.text=element_text(size=14),
+	axis.text.x = rotatedAxisElementText(90,'x'),
+	strip.text.x = element_text(size = 18, angle = 0))
+
+
+## Analysis
+# Historic Inequality Levels
+
+historic = regplot_w %>% left_join(regplot_b,by=c("Region","Year")) %>% filter(Year<2020)
+
+dat_labels <- historic %>% group_by(Region) %>% summarize(
+  x=mean(Predicted.x),
+  y=mean(Predicted.y) + 0.03,
+  label_value=round(cor.test(Predicted.x,Predicted.y,method="spearman")$estimate,2)
+)
+
+library(rcartocolor)
+cols = carto_pal(9, "Safe")
+bw_correlations_historic=ggplot(historic,aes(Predicted.x,Predicted.y,group=Region,color=Region)) +
+geom_point(size=2.5) + geom_smooth(se=F) +
+xlim(0.3,0.7) + ylim(0.1,0.75) + 
+geom_text(data=dat_labels, aes(x=x, y=y,label=label_value)) + 
+theme_bw() + labs(x=expression(Inequality[within]),y=expression(Inequality[between])) + 
+theme(axis.title=element_text(size=16),axis.text=element_text(size=13),legend.position=c(0.1,0.7))+
+geom_abline(intercept = 0, slope = 1,col="gray") + scale_color_manual(values=cols)
+
+ggsave("G:/Projects/PhD Research/Paper 2/Analysis/6_InequalityForecasting/Figures/bw_correlations_historic.pdf",bw_correlations_historic,
+width=6,height=6,useDingbats=FALSE,family="sans")
+
+
+historic %>% group_by(Region) %>% summarize(out= cor.test(Predicted.x,Predicted.y,method="spearman")$estimate)
+historic %>% group_by(Region) %>% summarize(out= cor.test(Predicted.x,Predicted.y,method="spearman")$p.value)
+
+#Slopes
+historic %>% group_by(Region) %>% summarize(out= coef(lm(Predicted.x~Predicted.y))[2]) %>% arrange(out)
+
+#Trend 
+
+historic %>% group_by(Region) %>% summarize(out= coef(lm(Predicted.x~Year))[2])%>% arrange(out)
+historic %>% group_by(Region) %>% summarize(out= coef(lm(Predicted.y~Year))[2])%>% arrange(out)
+
+#Difference Within and Between
+historic %>% group_by(Region) %>% summarize(out= mean(Predicted.x - Predicted.y))%>% arrange(out)
+
+###
+
+
+# Future Inequality Levels
+
+## Analysis with Inequality levels averaged across SSP scenarios
+
+historic = regplot_w %>% left_join(regplot_b,by=c("Region","Year")) %>% filter(Year>2018)
+historic$Type = NA
+historic$Type[historic$Year<2020] = "Observed"
+historic$Type[historic$Year>=2020] = "Forecasted"
+
+dat_labels <- historic %>% group_by(Region) %>% summarize(
+  label_position=mean(Predicted.x),
+  label_value=mean(Predicted.y)
+)
+
+future_avgssp = ggplot(historic,aes(Predicted.x,Predicted.y,group=Region,color=Region)) +
+geom_point(data=subset(historic,Year>2019),aes(shape=as.factor(Year)),size=4) +
+#geom_pointrange(aes(ymin=Low.y , ymax=High.y))+
+#geom_pointrange(aes(xmin=Low.x , xmax=High.x))+
+geom_point(data=subset(historic,Year==2019),col="black",size=4) +
+geom_line(size=2,alpha=0.5) + #geom_smooth(se=F) +
+#geom_text(data=dat_labels, aes(x=label_position, y=label_value+0.03,label=Region)) + 
+theme_bw() + labs(x=expression(Inequality[within]),y=expression(Inequality[between])) + 
+theme(axis.title=element_text(size=16),axis.text=element_text(size=13))+
+geom_abline(intercept = 0, slope = 1,col="gray") 
+
+future_avgssp
+
+## Analysis with Inequality levels for SSP1:5
+
+ssp1w = outdfw %>% filter(Scenario=="SSP1") %>% group_by(Region,Year) %>% summarize(Predicted=mean(Inequality_wtn)) %>% ungroup()
+ssp1b = outdfb %>% filter(Scenario=="SSP1") %>% group_by(Region,Year) %>% summarize(Predicted=mean(Inequality_btwn)) %>% ungroup()
+
+historic = ssp1w %>% left_join(ssp1b,by=c("Region","Year")) %>% filter(Year>2018)
+historic$Type = NA
+historic$Type[historic$Year<2020] = "Observed"
+historic$Type[historic$Year>=2020] = "Forecasted"
+
+dat_labels <- historic %>% group_by(Region) %>% summarize(
+  label_position=mean(Predicted.x),
+  label_value=mean(Predicted.y)
+)
+
+future_ssp1= ggplot(historic,aes(Predicted.x,Predicted.y,group=Region,color=Region)) +
+geom_point(data=subset(historic,Year>2019),aes(shape=as.factor(Year)),size=4) +
+#geom_pointrange(aes(ymin=Low.y , ymax=High.y))+
+#geom_pointrange(aes(xmin=Low.x , xmax=High.x))+
+geom_point(data=subset(historic,Year==2019),col="black",size=4) +
+geom_line(size=2,alpha=0.5) + #geom_smooth(se=F) +
+#geom_text(data=dat_labels, aes(x=label_position, y=label_value+0.03,label=Region)) + 
+theme_bw() + labs(x=expression(Inequality[within]),y=expression(Inequality[between])) + 
+theme(axis.title=element_text(size=16),axis.text=element_text(size=13),legend.position="none")+
+geom_abline(intercept = 0, slope = 1,col="gray")  +
+xlim(0.4,0.7) + ylim(0.2,0.7)
+
+###################################################
+ssp2w = outdfw %>% filter(Scenario=="SSP2") %>% group_by(Region,Year) %>% summarize(Predicted=mean(Inequality_wtn)) %>% ungroup()
+ssp2b = outdfb %>% filter(Scenario=="SSP2") %>% group_by(Region,Year) %>% summarize(Predicted=mean(Inequality_btwn)) %>% ungroup()
+
+historic = ssp2w %>% left_join(ssp2b,by=c("Region","Year")) %>% filter(Year>2018)
+historic$Type = NA
+historic$Type[historic$Year<2020] = "Observed"
+historic$Type[historic$Year>=2020] = "Forecasted"
+
+dat_labels <- historic %>% group_by(Region) %>% summarize(
+  label_position=mean(Predicted.x),
+  label_value=mean(Predicted.y)
+)
+
+future_ssp2= ggplot(historic,aes(Predicted.x,Predicted.y,group=Region,color=Region)) +
+geom_point(data=subset(historic,Year>2019),aes(shape=as.factor(Year)),size=4) +
+#geom_pointrange(aes(ymin=Low.y , ymax=High.y))+
+#geom_pointrange(aes(xmin=Low.x , xmax=High.x))+
+geom_point(data=subset(historic,Year==2019),col="black",size=4) +
+geom_line(size=2,alpha=0.5) + #geom_smooth(se=F) +
+#geom_text(data=dat_labels, aes(x=label_position, y=label_value+0.03,label=Region)) + 
+theme_bw() + labs(x=expression(Inequality[within]),y=expression(Inequality[between])) + 
+theme(axis.title=element_text(size=16),axis.text=element_text(size=13),legend.position="none")+
+geom_abline(intercept = 0, slope = 1,col="gray") +
+xlim(0.4,0.7) + ylim(0.2,0.7)
+
+
+###################################################
+ssp3w = outdfw %>% filter(Scenario=="SSP3") %>% group_by(Region,Year) %>% summarize(Predicted=mean(Inequality_wtn)) %>% ungroup()
+ssp3b = outdfb %>% filter(Scenario=="SSP3") %>% group_by(Region,Year) %>% summarize(Predicted=mean(Inequality_btwn)) %>% ungroup()
+
+historic = ssp3w %>% left_join(ssp3b,by=c("Region","Year")) %>% filter(Year>2018)
+historic$Type = NA
+historic$Type[historic$Year<2020] = "Observed"
+historic$Type[historic$Year>=2020] = "Forecasted"
+
+dat_labels <- historic %>% group_by(Region) %>% summarize(
+  label_position=mean(Predicted.x),
+  label_value=mean(Predicted.y)
+)
+
+future_ssp3= ggplot(historic,aes(Predicted.x,Predicted.y,group=Region,color=Region)) +
+geom_point(data=subset(historic,Year>2019),aes(shape=as.factor(Year)),size=4) +
+#geom_pointrange(aes(ymin=Low.y , ymax=High.y))+
+#geom_pointrange(aes(xmin=Low.x , xmax=High.x))+
+geom_point(data=subset(historic,Year==2019),col="black",size=4) +
+geom_line(size=2,alpha=0.5) + #geom_smooth(se=F) +
+#geom_text(data=dat_labels, aes(x=label_position, y=label_value+0.03,label=Region)) + 
+theme_bw() + labs(x=expression(Inequality[within]),y=expression(Inequality[between])) + 
+theme(axis.title=element_text(size=16),axis.text=element_text(size=13),legend.position="none")+
+geom_abline(intercept = 0, slope = 1,col="gray") +
+xlim(0.4,0.7) + ylim(0.2,0.7)
+
+###################################################
+ssp4w = outdfw %>% filter(Scenario=="SSP4") %>% group_by(Region,Year) %>% summarize(Predicted=mean(Inequality_wtn)) %>% ungroup()
+ssp4b = outdfb %>% filter(Scenario=="SSP4") %>% group_by(Region,Year) %>% summarize(Predicted=mean(Inequality_btwn)) %>% ungroup()
+
+historic = ssp4w %>% left_join(ssp4b,by=c("Region","Year")) %>% filter(Year>2018)
+historic$Type = NA
+historic$Type[historic$Year<2020] = "Observed"
+historic$Type[historic$Year>=2020] = "Forecasted"
+
+dat_labels <- historic %>% group_by(Region) %>% summarize(
+  label_position=mean(Predicted.x),
+  label_value=mean(Predicted.y)
+)
+
+future_ssp4= ggplot(historic,aes(Predicted.x,Predicted.y,group=Region,color=Region)) +
+geom_point(data=subset(historic,Year>2019),aes(shape=as.factor(Year)),size=4) +
+#geom_pointrange(aes(ymin=Low.y , ymax=High.y))+
+#geom_pointrange(aes(xmin=Low.x , xmax=High.x))+
+geom_point(data=subset(historic,Year==2019),col="black",size=4) +
+geom_line(size=2,alpha=0.5) + #geom_smooth(se=F) +
+#geom_text(data=dat_labels, aes(x=label_position, y=label_value+0.03,label=Region)) + 
+theme_bw() + labs(x=expression(Inequality[within]),y=expression(Inequality[between])) + 
+theme(axis.title=element_text(size=16),axis.text=element_text(size=13),legend.position="none")+
+geom_abline(intercept = 0, slope = 1,col="gray")  + 
+xlim(0.4,0.7) + ylim(0.2,0.7)
+
+###################################################
+ssp5w = outdfw %>% filter(Scenario=="SSP5") %>% group_by(Region,Year) %>% summarize(Predicted=mean(Inequality_wtn)) %>% ungroup()
+ssp5b = outdfb %>% filter(Scenario=="SSP5") %>% group_by(Region,Year) %>% summarize(Predicted=mean(Inequality_btwn)) %>% ungroup()
+
+historic = ssp5w %>% left_join(ssp5b,by=c("Region","Year")) %>% filter(Year>2018)
+historic$Type = NA
+historic$Type[historic$Year<2020] = "Observed"
+historic$Type[historic$Year>=2020] = "Forecasted"
+
+dat_labels <- historic %>% group_by(Region) %>% summarize(
+  label_position=mean(Predicted.x),
+  label_value=mean(Predicted.y)
+)
+
+future_ssp5= ggplot(historic,aes(Predicted.x,Predicted.y,group=Region,color=Region)) +
+geom_point(data=subset(historic,Year>2019),aes(shape=as.factor(Year)),size=4) +
+#geom_pointrange(aes(ymin=Low.y , ymax=High.y))+
+#geom_pointrange(aes(xmin=Low.x , xmax=High.x))+
+geom_point(data=subset(historic,Year==2019),col="black",size=4) +
+geom_line(size=2,alpha=0.5) + #geom_smooth(se=F) +
+#geom_text(data=dat_labels, aes(x=label_position, y=label_value+0.03,label=Region)) + 
+theme_bw() + labs(x=expression(Inequality[within]),y=expression(Inequality[between])) + 
+theme(axis.title=element_text(size=16),axis.text=element_text(size=13),legend.position="none")+
+geom_abline(intercept = 0, slope = 1,col="gray") + 
+xlim(0.4,0.7) + ylim(0.2,0.7)
+
+
+library(grid)
+
+blank <- grid.rect(gp=gpar(col="white"))
+
+dev.new()
+grid.arrange(future_ssp5,blank,future_ssp3,blank,future_ssp2,blank,future_ssp1,blank,future_ssp4,ncol=3,nrow=3)
+
+
+
